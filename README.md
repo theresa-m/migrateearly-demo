@@ -34,13 +34,13 @@ End of demo.
 - Support for Java 8+ JDKs
 - Analyzes the dependencies by class or package (default) level
 ### Package level summary (default)
-- Run `jdeps` with most recent JDK (currently 11) to view a list of dependencies of your application
+- Run `jdeps` with most recent JDK (currently 12) to view a list of dependencies of your application
 - The default output is a summary of the modules that are being accessed followed by a list of package level dependencies
 ```
-docker-11 jdeps /DemoApp/target/DemoApp.jar
+docker-12 jdeps /DemoApp/target/DemoApp.jar
 ```
 ```
-DemoApp.jar -> JDK removed internal API
+DemoApp.jar -> jdk8internals
 DemoApp.jar -> java.base
 DemoApp.jar -> java.desktop
 DemoApp.jar -> jdk.unsupported
@@ -49,16 +49,16 @@ DemoApp.jar -> jdk.unsupported
    migrate.early                                      -> java.lang                                          java.base
    migrate.early                                      -> java.lang.reflect                                  java.base
    migrate.early                                      -> sun.misc                                           JDK internal API (jdk.unsupported)
-   migrate.early                                      -> sun.misc                                           JDK internal API (JDK removed internal API)
+   migrate.early                                      -> sun.misc                                           JDK internal API (jdk8internals)
 ```
 ### Class level summary
 - The above package level dependencies don't give us many details about the internal APIs used in this application
 - The command line option `-verbose:class` or `-v` shows dependencies at the class level which will be more useful when refactoring code to avoid internal APIs
 ```
-docker-11 jdeps -v /DemoApp/target/DemoApp.jar
+docker-12 jdeps -v /DemoApp/target/DemoApp.jar
 ```
 ```
-DemoApp.jar -> JDK removed internal API
+DemoApp.jar -> jdk8internals
 DemoApp.jar -> java.base
 DemoApp.jar -> java.desktop
 DemoApp.jar -> jdk.unsupported
@@ -75,7 +75,7 @@ DemoApp.jar -> jdk.unsupported
    migrate.early.Demo                                 -> java.lang.Throwable                                java.base
    migrate.early.Demo                                 -> java.lang.reflect.Field                            java.base
    migrate.early.Demo                                 -> migrate.early.DemoRunnable                         DemoApp.jar
-   migrate.early.Demo                                 -> sun.misc.BASE64Encoder                             JDK internal API (JDK removed internal API)
+   migrate.early.Demo                                 -> sun.misc.BASE64Encoder                             JDK internal API (jdk8internals)
    migrate.early.Demo                                 -> sun.misc.Unsafe                                    JDK internal API (jdk.unsupported)
    migrate.early.DemoRunnable                         -> java.io.PrintStream                                java.base
    migrate.early.DemoRunnable                         -> java.lang.Object                                   java.base
@@ -87,7 +87,7 @@ DemoApp.jar -> jdk.unsupported
 #### Filter by package
 - `jdeps` option `-p packagename` shows only dependencies belonging to a certain package
 ```
-docker-11 jdeps -v -p java.lang /DemoApp/target/DemoApp.jar
+docker-12 jdeps -v -p java.lang /DemoApp/target/DemoApp.jar
 ```
 ```
 DemoApp.jar -> java.base
@@ -99,7 +99,7 @@ DemoApp.jar -> java.base
 - the above example does not show packages nested within java.lang. We can show these using the regex filter `java.lang.*`
 - `-e` is the command line option
 ```
-docker-11 jdeps -v -e java.lang.* /DemoApp/target/DemoApp.jar
+docker-12 jdeps -v -e java.lang.* /DemoApp/target/DemoApp.jar
 ```
 ```
 DemoApp.jar -> java.base
@@ -112,7 +112,7 @@ DemoApp.jar -> java.base
 #### Filter out by pattern
 - `jdeps` option `-filter pattern` filters out  dependencies by regex pattern
 ```
-docker-11 jdeps -v -filter java.lang.* /DemoApp/target/DemoApp.jar
+docker-12 jdeps -v -filter java.lang.* /DemoApp/target/DemoApp.jar
 ```
 ```
 DemoApp.jar -> JDK removed internal API
@@ -132,7 +132,7 @@ DemoApp.jar -> jdk.unsupported
 - Analyzes the dependencies ay class or package (default) level
 - Not only are internal API dependencies listed, but more reliable alternatives suggested. For example BASE64Encoder has simply been renamed and VarHandles have been introduced as a safer alternative to sun.misc.Unsafe.
 ```
-docker-11 jdeps -jdkinternals /DemoApp/target/DemoApp.jar
+docker-12 jdeps -jdkinternals /DemoApp/target/DemoApp.jar
 ```
 ```
 DemoApp.jar -> JDK removed internal API
@@ -160,7 +160,7 @@ sun.misc.Unsafe                          See http://openjdk.java.net/jeps/260
 - `--list` all API elements that are marked as deprecated in the JDK
 - includes `forRemoval()` and `since()` elements of the `@Deprecated` annotation
 ```
-docker-11 jdeprscan --list
+docker-12 jdeprscan --list
 ```
 ```
 @Deprecated(since="1.5") class org.xml.sax.helpers.AttributeListImpl
@@ -171,7 +171,7 @@ docker-11 jdeprscan --list
 ```
 - Use the following command to view a list of classes deprecated and marked for removal (these are the most important)
 ```
-docker-11 jdeprscan --list --for-removal
+docker-12 jdeprscan --list --for-removal
 ```
 ```
 @Deprecated(since="11", forRemoval=true) class java.util.jar.Pack200
@@ -184,7 +184,7 @@ docker-11 jdeprscan --list --for-removal
 - Default output lists deprecated APIs for the JDK
 - Error occurs here for `sun/misc/Base64Encoder` in this example because this class was renamed in Java 9 as was evident from the `jdeps` output previously
 ```
-docker-11 jdeprscan /DemoApp/target/DemoApp.jar
+docker-12 jdeprscan /DemoApp/target/DemoApp.jar
 ```
 ```
 Jar file /DemoApp/target/DemoApp.jar:
@@ -208,7 +208,7 @@ class migrate/early/Demo uses deprecated method java/lang/Thread::destroy()V (fo
 - best practice is to not use any deprecated APIs in your application. Deprecated APIs may be dangerous to use
 - as a bare minimum make sure you aren't using deprecated classes that are marked for removal else they may not exist in the next release with `--for-removal`
 ```
-docker-11 jdeprscan --for-removal /DemoApp/target/DemoApp.jar
+docker-12 jdeprscan --for-removal /DemoApp/target/DemoApp.jar
 ```
 ```
 Jar file /DemoApp/target/DemoApp.jar:
@@ -220,7 +220,7 @@ error: cannot find class sun/misc/BASE64Encoder
 - note that since we are running this command with Java 11 `Thread.destroy()` is not identified even though it was marked as deprecated before Java 8.
 - the enum constant warning that is present in the output is a known bug in OpenJDK and is not meaningful to `DemoApp`
 ```
-docker-11 jdeprscan --release 8 /DemoApp/target/DemoApp.jar
+docker-12 jdeprscan --release 8 /DemoApp/target/DemoApp.jar
 ```
 ```
 warning: unknown enum constant javax.annotation.Resource.AuthenticationType.CONTAINER
@@ -267,7 +267,7 @@ End of demo.
 - since Java 9 jdeps supports a `--multi-release` option allowing the user to view dependencies for various releases
 - Java 8, or base jdeps output
 ```
-docker-9 jdeps -jdkinternals --multi-release base /MultiReleaseDemoApp/target/MultiReleaseDemoApp.jar
+docker-12 jdeps -jdkinternals --multi-release base /MultiReleaseDemoApp/target/MultiReleaseDemoApp.jar
 ```
 ```
 MultiReleaseDemoApp.jar -> JDK removed internal API
@@ -288,7 +288,7 @@ sun.misc.Unsafe                          See http://openjdk.java.net/jeps/260
 ```
 - Java 9+ jdeps output. Notice there are no longer warnings about using internal APIs since this issue was fixed for Java 9+ in the multi-release jar
 ```
-docker-9 jdeps --jdk-internals --multi-release 11 /MultiReleaseDemoApp/target/MultiReleaseDemoApp.jar
+docker-12 jdeps --jdk-internals --multi-release 12 /MultiReleaseDemoApp/target/MultiReleaseDemoApp.jar
 ```
 ```
 (no output)
